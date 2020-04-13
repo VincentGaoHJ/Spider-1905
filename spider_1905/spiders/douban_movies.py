@@ -18,8 +18,9 @@ class DoubanMovieSpider(scrapy.Spider):
     allowed_domains = ['1905.com']
 
     def start_requests(self):
-        country_list = ["China"]
-        year_list = list(range(2014, 2021))
+        country_list = ["India"]
+        # year_list = list(range(2014, 2021))
+        year_list = [2014]
         for country_info, year_info in itertools.product(country_list, year_list):
             url = f"https://www.1905.com/mdb/film/list/country-{str(country_info)}/year-{str(year_info)}"
             info_complete = f"{country_info}{year_info}"
@@ -94,88 +95,71 @@ class DoubanMovieSpider(scrapy.Spider):
 
     def parse_movie_performer(self, response):
         item = response.meta['item']
-        # director = response.xpath('//h3[contains(text(),"导演")]/following-sibling::div/div/ul/li//text()').extract()
-        # print("director", director)
-        # scripter = response.xpath('//h3[contains(text(),"编剧")]/following-sibling::div/div/ul/li//text()').extract()
-        # print("scripter", scripter)
-        # actor = response.xpath('//h3[contains(text(),"演员")]/following-sibling::div/div/ul/li//text()').extract()
-        # print("actor", actor)
-        # producer = response.xpath('//h3[contains(text(),"制")]/following-sibling::ul/li/div//text()').extract()
-        # print("producer", producer)
-        # photograph = response.xpath('//h3[contains(text(),"摄")]/following-sibling::ul/li/div//text()').extract()
-        # print("photograph", photograph)
-        # editor = response.xpath('//h3[contains(text(),"剪")]/following-sibling::ul/li/div//text()').extract()
-        # print("editor", editor)
-        # music = response.xpath('//h3[contains(text(),"原创音乐")]/following-sibling::ul/li/div//text()').extract()
-        # print("music", music)
-        # art = response.xpath('//h3[contains(text(),"艺术指导")]/following-sibling::ul/li/div//text()').extract()
-        # print("art", art)
-        # deputy = response.xpath('//h3[contains(text(),"副")]/following-sibling::ul/li/div//text()').extract()
-        # print("deputy", deputy)
-        # stuntman = response.xpath('//h3[contains(text(),"特")]/following-sibling::ul/li/div//text()').extract()
-        # print("stuntman", stuntman)
 
         performer_dict = {}
-        # performers_1 = response.xpath('//div[contains(@class,"secPage-actors")]')
-        # for performer in performers_1:
-        #     performer_key = performer.xpath('h3/text()').extract_first()
-        #     if performer_key in ["导演", "编剧", "演员"]:
-        #         print("*" * 10, performer_key, "*" * 10)
-        #         for info_content in performer.xpath('//li[contains(@class,"proList-conts-name")]'):
-        #             name = info_content.xpath('a/text()').extract_first()
-        #             name_eng = info_content.xpath('em/text()').extract_first()
-        #             print(name, name_eng)
+        performers_1 = response.xpath('//div[contains(@class,"secPage-actors")]')
+        for performer in performers_1:
+            performer_key = performer.xpath('h3/text()').extract_first()
+            print(performer_key)
+            if performer_key in ["导演", "编剧", "演员"]:
+                # print("*" * 10, performer_key, "*" * 10)
+                name_list_str = ""
+                # print(performer)
+                # performer_complete = performer.xpath('div[contains(@class,"secPage-actors-proList")]')
+                # print(performer_complete)
+                for info_content in performer.xpath('div/div/ul/li[contains(@class,"proList-conts-name")]'):
+                    name = info_content.xpath('a/text()').extract_first()
+                    name_eng = info_content.xpath('em/text()').extract_first()
+                    name_full = f"{name}_{name_eng}"
+                    name_list_str = name_full if name_list_str is "" else f"{name_list_str}|{name_full}"
+                    # print(name_full)
+                # print(name_list_str)
+                performer_dict[performer_key] = name_list_str
 
         performers_2 = response.xpath('//div[contains(@class,"actors-producer-conts")]')
         for performer in performers_2:
             performer_key = performer.xpath('h3/text()').extract_first()
             performer_key = ''.join(performer_key.split())
-            print(performer_key)
+            # print(performer_key)
             if performer_key in ["制片", "摄影", "剪辑", "原创音乐", "艺术指导", "副导演", "特技师"]:
-                print("*" * 10, performer_key, "*" * 10)
+                # print("*" * 10, performer_key, "*" * 10)
+                name_list_str = ""
+                # TODO 需要像上一个解决方法一样解决
+                # TODO 需要解决跳过 url 流程
                 for info_content in performer.xpath('//li[contains(@class,"proList-conts-name")]'):
                     name = info_content.xpath('a/text()').extract_first()
                     name_eng = info_content.xpath('em/text()').extract_first()
-                    print(name, name_eng)
+                    name_full = f"{name}_{name_eng}"
+                    name_list_str = name_full if name_list_str is "" else f"{name_list_str}|{name_full}"
+                    # print(name_full)
+                # print(name_list_str)
+                performer_dict[performer_key] = name_list_str
 
+        key_pair = [("导演", "director"),
+                    ("编剧", "playwright"),
+                    ("演员", "actor"),
+                    ("制片", "producer"),
+                    ("摄影", "photographer"),
+                    ("剪辑", "montage"),
+                    ("原创音乐", "music"),
+                    ("艺术指导", "art_director"),
+                    ("副导演", "assistant_director"),
+                    ("特技师", "acrobats")]
 
-            # print("info_key", info_key)
-            # info_value_list = performer.xpath('dl/dd/text()').extract()
-            # for i in range(len(info_key_list)):
-            #     info_key = "".join(info_key_list[i].split())
-            #     info_value = info_value_list[i].split()
-            #     info_dict[info_key] = info_value
+        for info_key, info_eng in key_pair:
+            if info_key in performer_dict:
+                if performer_dict[info_key]:
+                    item[info_eng] = performer_dict[info_key]
+                else:
+                    item[info_eng] = None
+            else:
+                item[info_eng] = None
 
-        # performer_2 = response.xpath('//dl[contains(@class,"clearfloat")]')
-        # for info in performer_2:
-        #     info_key_list = info.xpath('dt/text()').extract()
-        #     info_value_list = info.xpath('dd/p/text()|dd/text()').extract()
-        #     for i in range(len(info_key_list)):
-        #         info_key = "".join(info_key_list[i].split())
-        #         info_value = info_value_list[i].split()
-        #         info_dict[info_key] = info_value
-        #
-        # key_pair = [("用户评分", "score"),
-        #             ("国别", "country"),
-        #             ("影片类型", "type_info"),
-        #             ("更多外文名", "foreign_name"),
-        #             ("时长", "duration"),
-        #             ("色彩", "color"),
-        #             ("版本", "dimension"),
-        #             ("片名", "name_varify"),
-        #             ("上映信息", "playdate")]
-        #
-        # for info_key, info_eng in key_pair:
-        #     if info_key in info_dict:
-        #         if info_dict[info_key]:
-        #             item[info_eng] = info_dict[info_key]
-        #         else:
-        #             item[info_eng] = None
-        #     else:
-        #         item[info_eng] = None
+        print(item)
+        raise Exception
 
-        # yield Request(url=item["url_scenario"], meta={'item': item},
-        #               callback=self.parse_movie_scenario)
+        yield Request(url=item["url_scenario"], meta={'item': item},
+                      callback=self.parse_movie_scenario)
 
     def parse_movie_scenario(self, response):
 

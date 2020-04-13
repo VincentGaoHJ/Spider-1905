@@ -38,3 +38,14 @@ class Spider1905Item(scrapy.Item):
     dimension = scrapy.Field()  # 版本信息
     name_varify = scrapy.Field()  # 二次验证片名，确保爬虫形成闭环
     playdate = scrapy.Field()  # 上映信息
+
+    director = scrapy.Field()  # 导演
+    playwright = scrapy.Field()  # 编剧
+    actor = scrapy.Field()  # 演员
+    producer = scrapy.Field()  # 制片
+    photographer = scrapy.Field()  # 摄影
+    montage = scrapy.Field()  # 剪辑
+    music = scrapy.Field()  # 原创音乐
+    art_director = scrapy.Field()  # 艺术指导
+    assistant_director = scrapy.Field()  # 副导演
+    acrobats = scrapy.Field()  # 特技师
