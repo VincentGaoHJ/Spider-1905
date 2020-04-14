@@ -13,6 +13,16 @@ from scrapy import Request
 from spider_1905.items import Spider1905Item
 
 
+def website_lookup(current_website, item_dict):
+    website_sequence = ["movie_url", "url_performer", "url_scenario", "url_feature", "url_make", "url_info"]
+    current_index = website_sequence.index(current_website)
+    for website in website_sequence[current_index + 1:]:
+        if item_dict[website] is not None:
+            return website
+
+    return False
+
+
 class DoubanMovieSpider(scrapy.Spider):
     name = 'spider_1905'
     allowed_domains = ['1905.com']
@@ -90,17 +100,20 @@ class DoubanMovieSpider(scrapy.Spider):
             else:
                 item[info_eng] = None
 
-        yield Request(url=item["url_performer"], meta={'item': item},
-                      callback=self.parse_movie_performer)
+        website = website_lookup(current_website="movie_url", item_dict=item)
+        generated_callback = self.website_callback_generation(website)
+        if generated_callback is not False:
+            yield Request(url=item[website], meta={'item': item},
+                          callback=generated_callback)
+        else:
+            return item
 
     def parse_movie_performer(self, response):
         item = response.meta['item']
-
         performer_dict = {}
         performers_1 = response.xpath('//div[contains(@class,"secPage-actors")]')
         for performer in performers_1:
             performer_key = performer.xpath('h3/text()').extract_first()
-            print(performer_key)
             if performer_key in ["导演", "编剧", "演员"]:
                 # print("*" * 10, performer_key, "*" * 10)
                 name_list_str = ""
@@ -124,15 +137,12 @@ class DoubanMovieSpider(scrapy.Spider):
             if performer_key in ["制片", "摄影", "剪辑", "原创音乐", "艺术指导", "副导演", "特技师"]:
                 # print("*" * 10, performer_key, "*" * 10)
                 name_list_str = ""
-                # TODO 需要像上一个解决方法一样解决
                 # TODO 需要解决跳过 url 流程
-                for info_content in performer.xpath('//li[contains(@class,"proList-conts-name")]'):
+                for info_content in performer.xpath('ul/li/div[contains(@class,"conts-name-top")]'):
                     name = info_content.xpath('a/text()').extract_first()
                     name_eng = info_content.xpath('em/text()').extract_first()
                     name_full = f"{name}_{name_eng}"
                     name_list_str = name_full if name_list_str is "" else f"{name_list_str}|{name_full}"
-                    # print(name_full)
-                # print(name_list_str)
                 performer_dict[performer_key] = name_list_str
 
         key_pair = [("导演", "director"),
@@ -155,11 +165,16 @@ class DoubanMovieSpider(scrapy.Spider):
             else:
                 item[info_eng] = None
 
-        print(item)
-        raise Exception
+        # yield Request(url=item["url_scenario"], meta={'item': item},
+        #               callback=self.parse_movie_scenario)
 
-        yield Request(url=item["url_scenario"], meta={'item': item},
-                      callback=self.parse_movie_scenario)
+        website = website_lookup(current_website="url_performer", item_dict=item)
+        generated_callback = self.website_callback_generation(website)
+        if generated_callback is not False:
+            yield Request(url=item[website], meta={'item': item},
+                          callback=generated_callback)
+        else:
+            return item
 
     def parse_movie_scenario(self, response):
 
@@ -187,9 +202,17 @@ class DoubanMovieSpider(scrapy.Spider):
             else:
                 item[info_eng] = None
 
-        if item["url_feature"]:
-            yield Request(url=item["url_feature"], meta={'item': item},
-                          callback=self.parse_movie_feature)
+        # if item["url_feature"]:
+        #     yield Request(url=item["url_feature"], meta={'item': item},
+        #                   callback=self.parse_movie_feature)
+
+        website = website_lookup(current_website="url_scenario", item_dict=item)
+        generated_callback = self.website_callback_generation(website)
+        if generated_callback is not False:
+            yield Request(url=item[website], meta={'item': item},
+                          callback=generated_callback)
+        else:
+            return item
 
     def parse_movie_feature(self, response):
 
@@ -198,9 +221,17 @@ class DoubanMovieSpider(scrapy.Spider):
         feature = response.xpath('//dd/text()').extract()
         item["feature"] = feature
 
-        if item["url_make"]:
-            yield Request(url=item["url_make"], meta={'item': item},
-                          callback=self.parse_movie_make)
+        # if item["url_make"]:
+        #     yield Request(url=item["url_make"], meta={'item': item},
+        #                   callback=self.parse_movie_make)
+
+        website = website_lookup(current_website="url_feature", item_dict=item)
+        generated_callback = self.website_callback_generation(website)
+        if generated_callback is not False:
+            yield Request(url=item[website], meta={'item': item},
+                          callback=generated_callback)
+        else:
+            return item
 
     def parse_movie_make(self, response):
         item = response.meta['item']
@@ -208,9 +239,17 @@ class DoubanMovieSpider(scrapy.Spider):
         make = response.xpath('//dd[@class="icon_all"]/text()').extract()
         item["make"] = make
 
-        if item["url_info"]:
-            yield Request(url=item["url_info"], meta={'item': item},
-                          callback=self.parse_movie_info)
+        # if item["url_info"]:
+        #     yield Request(url=item["url_info"], meta={'item': item},
+        #                   callback=self.parse_movie_info)
+
+        website = website_lookup(current_website="url_make", item_dict=item)
+        generated_callback = self.website_callback_generation(website)
+        if generated_callback is not False:
+            yield Request(url=item[website], meta={'item': item},
+                          callback=generated_callback)
+        else:
+            return item
 
     def parse_movie_info(self, response):
         item = response.meta['item']
@@ -253,32 +292,18 @@ class DoubanMovieSpider(scrapy.Spider):
             else:
                 item[info_eng] = None
 
-        print("=" * 30)
-        print("name", item["name"])
-        print("movie_id", item["movie_id"])
-        print("scenario", item["scenario"])
-        print("feature", item["feature"])
-        print("make", item["make"])
-
-        print("score", item["score"])
-        print("country", item["country"])
-        print("type_info", item["type_info"])
-        print("foreign_name", item["foreign_name"])
-        print("duration", item["duration"])
-        print("color", item["color"])
-        print("dimension", item["dimension"])
-        print("name_varify", item["name_varify"])
-        print("playdate", item["playdate"])
-
-        print("url_video", item["url_video"])
-        print("url_still", item["url_still"])
-        print("url_news", item["url_news"])
-        print("url_review", item["url_review"])
-        print("url_performer", item["url_performer"])
-        print("url_award", item["url_award"])
-        print("url_scenario", item["url_scenario"])
-        print("url_feature", item["url_feature"])
-        print("url_make", item["url_make"])
-        print("url_info", item["url_info"])
-
+        print(item)
         return item
+
+    def website_callback_generation(self, website):
+        if website == "url_performer":
+            return self.parse_movie_performer
+        elif website == "url_scenario":
+            return self.parse_movie_scenario
+        elif website == "url_feature":
+            return self.parse_movie_feature
+        elif website == "url_make":
+            return self.parse_movie_make
+        elif website == "url_info":
+            return self.parse_movie_info
+        raise Exception("There is no way to generate next callback, please check again.")
