@@ -39,6 +39,7 @@ class Spider1905Item(scrapy.Item):
     name_varify = scrapy.Field()  # 二次验证片名，确保爬虫形成闭环
     playdate = scrapy.Field()  # 上映信息
 
+    # 演职人员信息
     director = scrapy.Field()  # 导演
     playwright = scrapy.Field()  # 编剧
     actor = scrapy.Field()  # 演员
