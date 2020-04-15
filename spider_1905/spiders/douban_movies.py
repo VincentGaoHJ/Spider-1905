@@ -31,10 +31,16 @@ class DoubanMovieSpider(scrapy.Spider):
         country_list = ["India"]
         # year_list = list(range(2014, 2021))
         year_list = [2014]
-        for country_info, year_info in itertools.product(country_list, year_list):
-            url = f"https://www.1905.com/mdb/film/list/country-{str(country_info)}/year-{str(year_info)}"
-            info_complete = f"{country_info}{year_info}"
+
+        for year_info in year_list:
+            url = f"https://www.1905.com/mdb/film/list/year-{str(year_info)}"
+            info_complete = f"{year_info}"
             yield Request(url=url, callback=getattr(self, info_complete + '_parse', self.parse))
+
+        # for country_info, year_info in itertools.product(country_list, year_list):
+        #     url = f"https://www.1905.com/mdb/film/list/country-{str(country_info)}/year-{str(year_info)}"
+        #     info_complete = f"{country_info}{year_info}"
+        #     yield Request(url=url, callback=getattr(self, info_complete + '_parse', self.parse))
 
     def parse(self, response):
         # 整个一年的影片数量
@@ -165,9 +171,6 @@ class DoubanMovieSpider(scrapy.Spider):
             else:
                 item[info_eng] = None
 
-        # yield Request(url=item["url_scenario"], meta={'item': item},
-        #               callback=self.parse_movie_scenario)
-
         website = website_lookup(current_website="url_performer", item_dict=item)
         generated_callback = self.website_callback_generation(website)
         if generated_callback is not False:
@@ -202,10 +205,6 @@ class DoubanMovieSpider(scrapy.Spider):
             else:
                 item[info_eng] = None
 
-        # if item["url_feature"]:
-        #     yield Request(url=item["url_feature"], meta={'item': item},
-        #                   callback=self.parse_movie_feature)
-
         website = website_lookup(current_website="url_scenario", item_dict=item)
         generated_callback = self.website_callback_generation(website)
         if generated_callback is not False:
@@ -221,10 +220,6 @@ class DoubanMovieSpider(scrapy.Spider):
         feature = response.xpath('//dd/text()').extract()
         item["feature"] = feature
 
-        # if item["url_make"]:
-        #     yield Request(url=item["url_make"], meta={'item': item},
-        #                   callback=self.parse_movie_make)
-
         website = website_lookup(current_website="url_feature", item_dict=item)
         generated_callback = self.website_callback_generation(website)
         if generated_callback is not False:
@@ -238,10 +233,6 @@ class DoubanMovieSpider(scrapy.Spider):
 
         make = response.xpath('//dd[@class="icon_all"]/text()').extract()
         item["make"] = make
-
-        # if item["url_info"]:
-        #     yield Request(url=item["url_info"], meta={'item': item},
-        #                   callback=self.parse_movie_info)
 
         website = website_lookup(current_website="url_make", item_dict=item)
         generated_callback = self.website_callback_generation(website)
@@ -259,10 +250,28 @@ class DoubanMovieSpider(scrapy.Spider):
         for info in infos_1:
             info_key_list = info.xpath('dl/dt/text()').extract()
             info_value_list = info.xpath('dl/dd/text()').extract()
+            if len(info_key_list) != len(info_value_list):
+                # 清空无内容字符串
+                info_key_list = [i.strip() for i in info_key_list]
+                info_key_list = [i for i in info_key_list if i != ""]
+                info_value_list = [i.strip() for i in info_value_list]
+                info_value_list = [i for i in info_value_list if i != ""]
+                # 删除可能会多出来了Key
+                if "官方网站" in info_key_list:
+                    info_key_list.remove("官方网站")
+
+            if len(info_key_list) != len(info_value_list):
+                print(info_key_list)
+                print(info_key_list)
+                raise Exception("key number list is not consistent with key value list")
+
             for i in range(len(info_key_list)):
                 info_key = "".join(info_key_list[i].split())
-                info_value = info_value_list[i].split()
-                info_dict[info_key] = info_value
+                if info_value_list[i] is not "":
+                    info_value = info_value_list[i].split()
+                    info_dict[info_key] = info_value
+                else:
+                    info_dict[info_key] = ""
 
         infos_2 = response.xpath('//dl[contains(@class,"clearfloat")]')
         for info in infos_2:
