@@ -7,6 +7,7 @@
 
 import json
 
+import re
 import os
 import csv
 import openpyxl
@@ -32,19 +33,25 @@ import openpyxl
 #         self.sheet.append(line)
 #         self.wb.save("movie.xlsx")
 #         return item
+
+
 def list2str(list_item):
-    new_list = [i for i in list_item if i != ""]
-    new_list = [i.strip() for i in new_list]
+    a = re.compile('(\t|\n|\r)')
+    new_list = [i.strip() for i in list_item]
+    new_list = [a.sub('', i) for i in new_list]
+    new_list = [i for i in new_list if i != ""]
     return "||".join(new_list)
 
 
-def prep(single_item):
-    if isinstance(single_item, str):  # 判断是否为字符串类型
-        return single_item
-    elif single_item is None:
+def prep(item, key):
+    if key not in item:
         return ""
-    elif isinstance(single_item, list):
-        return list2str(single_item)
+    elif not item[key]:
+        return ""
+    elif isinstance(item[key], str):
+        return item[key]
+    elif isinstance(item[key], list):
+        return list2str(item[key])
     else:
         raise Exception("Output item is not str nor list.")
 
@@ -54,21 +61,42 @@ class Spider1905Pipeline(object):
         store_file = os.path.dirname(__file__) + '/spiders/movie_info.csv'
         self.file = open(store_file, 'w', newline='')
         self.writer = csv.writer(self.file)
+        self.writer.writerow([
+            "movie_id", "name", "scenario",
+            "make", "feature", "score",
+            "country", "type_info", "foreign_name",
+            "duration", "color", "dimension",
+            "name_varify", "playdate",
+
+            "director", "playwright", "actor",
+            "producer", "photographer", "montage",
+            "music", "art_director", "assistant_director",
+            "acrobats",
+
+            "movie_url", "url_video", "url_still",
+            "url_news", "url_review", "url_performer",
+            "url_award", "url_scenario", "url_feature",
+            "url_make", "url_info",
+        ])
 
     def process_item(self, item, spider):
-        # 判断字段值不为空再写入文件
-        print(prep(item["make"]))
-        print(prep(item["feature"]))
-        print(prep(item["score"]))
-        self.writer.writerow([prep(item["movie_id"]), prep(item["name"]), prep(item["scenario"]),
-                              prep(item["make"]), prep(item["feature"]), prep(item["score"]),
-                              ])
+        self.writer.writerow([
+            prep(item, "movie_id"), prep(item, "name"), prep(item, "scenario"),
+            prep(item, "make"), prep(item, "feature"), prep(item, "score"),
+            prep(item, "country"), prep(item, "type_info"), prep(item, "foreign_name"),
+            prep(item, "duration"), prep(item, "color"), prep(item, "dimension"),
+            prep(item, "name_varify"), prep(item, "playdate"),
 
-        # self.writer.writerow([prep(item["movie_id"]), prep(item["name"]), prep(item["scenario"]),
-        #                       prep(item["make"]), prep(item["feature"]), prep(item["score"]),
-        #                       prep(item["country"]), prep(item["type_info"]), prep(item["foreign_name"]),
-        #                       prep(item["duration"]), prep(item["color"]), prep(item["dimension"]),
-        #                       prep(item["name_varify"]), prep(item["playdate"])])
+            prep(item, "director"), prep(item, "playwright"), prep(item, "actor"),
+            prep(item, "producer"), prep(item, "photographer"), prep(item, "montage"),
+            prep(item, "music"), prep(item, "art_director"), prep(item, "assistant_director"),
+            prep(item, "acrobats"),
+
+            prep(item, "movie_url"), prep(item, "url_video"), prep(item, "url_still"),
+            prep(item, "url_news"), prep(item, "url_review"), prep(item, "url_performer"),
+            prep(item, "url_award"), prep(item, "url_scenario"), prep(item, "url_feature"),
+            prep(item, "url_make"), prep(item, "url_info")
+        ])
         return item
 
     def close_spider(self, spider):

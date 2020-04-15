@@ -292,7 +292,6 @@ class DoubanMovieSpider(scrapy.Spider):
             else:
                 item[info_eng] = None
 
-        print(item)
         return item
 
     def website_callback_generation(self, website):
@@ -306,4 +305,5 @@ class DoubanMovieSpider(scrapy.Spider):
             return self.parse_movie_make
         elif website == "url_info":
             return self.parse_movie_info
-        raise Exception("There is no way to generate next callback, please check again.")
+        else:
+            raise Exception("There is no way to generate next callback, please check again.")
